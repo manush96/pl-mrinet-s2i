@@ -1,0 +1,45 @@
+#!/bin/bash -e
+#
+# S2I assemble script for the 'billrainford/tensorflowapp-sample' image.
+# The 'assemble' script builds your application source so that it is ready to run.
+#
+# For more information refer to the documentation:
+#	https://github.com/openshift/source-to-image/blob/master/docs/builder_image.md
+#
+
+# If the 'billrainford/tensorflowapp-sample' assemble script is executed with the '-h' flag, print the usage.
+set -ex
+
+if [[ "$1" == "-h" ]]; then
+	exec /usr/libexec/s2i/usage
+fi
+
+# Restore artifacts from the previous build (if they exist).
+#
+if [ "$(ls /tmp/artifacts/ 2>/dev/null)" ]; then
+  echo "---> Restoring build artifacts..."
+  mv /tmp/artifacts/. ./
+fi
+
+echo "---> List /tmp"
+ls  /tmp/.
+
+echo "---> List /tmp/src"
+ls  /tmp/src/.
+
+echo "---> Installing application source"
+
+cp -Rf /tmp/src/. /opt/app-root/src/
+
+echo "---> List /opt/app-root/src"
+ls  /opt/app-root/src/
+
+echo "---> Create output dir: /opt/app-root/src/output"
+mkdir /opt/app-root/src/output
+
+
+echo "---> Training the model"
+exec python /opt/app-root/src/mrinet-s2i/tensorflowapp-training.py --prefix mnist- --saved_model_name my_saved_model /opt/app-root/src/input /opt/app-root/src/output
+
+echo "---> Training complete"
+echo "---> Model location: /opt/app-root/src/output/my_saved_model/1/"
