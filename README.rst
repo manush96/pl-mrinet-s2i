@@ -53,7 +53,7 @@ Example Command: (Run from root of project repo)
 
 .. code-block:: bash
 
-  s2i build . pl-mrinet-s2i-centos-python3 tensorflowapp-sample-centos
+  s2i build . pl-mrinet-s2i-centos-python3 mrinet-s2i-centos
 
 If you'd like see additional information when building, append the --loglevel <loglevel_value>
 
