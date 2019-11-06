@@ -93,20 +93,6 @@ Make sure your user is in the docker group if you want to run the docker command
     newgrp docker
 
 
-Run our MNIST model and make an inference
-=========================================
-
-.. code-block:: bash
-
-  docker run mrinet-s2i-centos
-
-If everything went well, you should see output similar to this:
-
-::
-
-  Inference Test:
-   Inference value of test Image is :  1
-   Creating new file... /opt/app-root/src/output/mnist-inference
 
 
 Debugging
