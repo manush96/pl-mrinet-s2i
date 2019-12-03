@@ -97,7 +97,7 @@ For the first time you must run training mode first and then run inference
 
 .. code-block:: bash
 
- docker run mrinet-s2i-centos ./tensorflowapp-training.py --prefix mrinet- --saved_model_name my_saved_model --run_mode train /opt/app-root/src/input /opt/app-root/src/output
+ docker run mrinet-s2i-centos ./tensorflowapp-training.py  --run_mode train /opt/app-root/src/input /opt/app-root/src/output
 
 
 
