@@ -65,3 +65,40 @@ If you'd like see additional information when building, append the --loglevel <l
 The output of the above command is a container named:
 ``mrinet-s2i-centos``
 
+Run
+*****
+Using Docker run
+====================
+
+Start Docker Service
+
+.. code-block:: bash
+
+sudo systemctl start docker
+
+Start Docker daemon at boot (Optional)
+
+.. code-block:: bash
+
+sudo systemctl enable docker
+
+Make sure your user is in the docker group if you want to run the docker command as a non-root user
+
+.. code-block:: bash
+
+sudo groupadd docker && sudo gpasswd -a ${USER} docker && sudo systemctl restart docker
+newgrp docker
+
+
+Run training or inference
+==========================
+
+For the first time you must run training mode first and then run inference
+
+.. code-block:: bash
+
+docker run mrinet-s2i-centos ./tensorflowapp-training.py --prefix mrinet- --saved_model_name my_saved_model --run_mode train /opt/app-root/src/input /opt/app-root/src/output
+
+
+
+
