@@ -38,8 +38,8 @@ echo "---> Create output dir: /opt/app-root/src/output"
 mkdir /opt/app-root/src/output
 
 
-echo "---> Training the model"
-exec python /opt/app-root/src/mrinet-s2i/tensorflowapp-training.py --prefix mnist- --saved_model_name my_saved_model /opt/app-root/src/input /opt/app-root/src/output
+# echo "---> Training the model"
+# # exec python /opt/app-root/src/mrinet-s2i/tensorflowapp-training.py --prefix mnist- --saved_model_name my_saved_model /opt/app-root/src/input /opt/app-root/src/output
 
-echo "---> Training complete"
-echo "---> Model location: /opt/app-root/src/output/my_saved_model/1/"
+# echo "---> Training complete"
+# echo "---> Model location: /opt/app-root/src/output/my_saved_model/1/"

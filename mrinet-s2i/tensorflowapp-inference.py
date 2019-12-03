@@ -1,4 +1,4 @@
-#                                                            _
+#!/usr/bin/env python3                                                       _
 # tensorflowapp ds app
 #
 # (c) 2016 Fetal-Neonatal Neuroimaging & Developmental Science Center
@@ -47,6 +47,54 @@ class Tensorflowapp(ChrisApp):
     # relative to the output dir) that you want to save to the output meta file when
     # called with the --saveoutputmeta flag
     OUTPUT_META_DICT = {}
+    def get_unet(self):
+        inputs = Input((256, 256, 1))
+        conv1 = Conv2D(32, (3, 3), activation='relu', padding='same')(inputs)
+        conv1 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv1)
+        pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+        conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(pool1)
+        conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv2)
+        pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+        conv3 = Conv2D(128, (3, 3), activation='relu', padding='same')(pool2)
+        conv3 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv3)
+        pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+
+        conv4 = Conv2D(256, (3, 3), activation='relu', padding='same')(pool3)
+        conv4 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv4)
+        pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+
+        conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(pool4)
+        conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(conv5)
+
+        up6 = concatenate([Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(conv5), conv4], axis=3)
+        conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(up6)
+        conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv6)
+
+        up7 = concatenate([Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(conv6), conv3], axis=3)
+        conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(up7)
+        conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv7)
+
+        up8 = concatenate([Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(conv7), conv2], axis=3)
+        conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(up8)
+        conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv8)
+
+        up9 = concatenate([Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(conv8), conv1], axis=3)
+        conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(up9)
+        conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv9)
+
+        conv10 = Conv2D(1, (1, 1), activation='sigmoid')(conv9)
+
+
+        model = Model(inputs=[inputs], outputs=[conv10])
+
+        model.summary()
+        #plot_model(model, to_file='model.png')
+
+        model.compile(optimizer=Adam(lr=1e-5, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.000000199), loss='binary_crossentropy', metrics=['accuracy'])
+
+        return model
 
     def define_parameters(self):
         """
@@ -63,6 +111,13 @@ class Tensorflowapp(ChrisApp):
                           type=str, optional=False,
                           help="Saved model file base path")
 
+    def get_test_data(self,options):
+        test_data = np.ndarray((1,256,256),dtype=np.uint8)
+        test_files = os.listdir(options.inputdir +"/test_images")
+        for i in test_files:
+            np.append(test_data,cv2.imread(options.inputdir + "/" + i))
+        return test_data
+
     def run(self, options):
         """
         Define the code to be run by this plugin app.
@@ -70,125 +125,21 @@ class Tensorflowapp(ChrisApp):
         self.run_tensorflow_app(options)
 
     def run_tensorflow_app(self, options):
-        digit_image = None
-        if options.inference_path:
-            str_path = os.path.abspath(options.inference_path)
-            infer_image = Image.open(str_path)
-            np_image = np.array(infer_image)
-            np_image = np_image.flatten() / 255.0
-            digit_image = np.reshape(np_image, (1, 784))
-            print("Test Image shape: ", digit_image.shape)
+        self.predict(options)
 
-        # Load the graph model
-        str_modelpath = os.path.join(options.inputdir, options.saved_model_name, self.VERSION,)
-        #str_modelpath = os.path.join(options.inputdir, options.saved_model_name, self.VERSION, "saved_model.pb")
-        #graph = load_graph(str_modelpath, options.prefix)
-
-        with tf.Session(graph=tf.Graph()) as sess:
-            graph = tf.saved_model.loader.load(
-                sess,
-                [tf.saved_model.tag_constants.SERVING],
-                str_modelpath
-            )
-
-            print("Model global variables:")
-            trainable_var = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-            for var in trainable_var:
-                print(var.name)
-
-
-            print("Op Names From Model:")
-            # Verify that we can access the list of operations in the graph
-            for op in sess.graph.get_operations():
-                print(op.name)
-
-            print("\nTensor Names:")
-            names=[tensor.name for tensor in tf.get_default_graph().as_graph_def().node]
-            for name in names:
-                print(name)
-
-            # see if the values below can be gathered from loaded model
-
-            print("Inference Test:")
-            if digit_image is not None:
-                prediction = sess.run('myOutput:0', feed_dict={'myInput:0': digit_image}).argmax()
-                print("Inference value of test Image is : ", prediction)
-                self.create_output(options, "inference", prediction)
-            else:
-                print("No inference test image provided.")
-
-            #print("Op Names From Model:")
-            # Verify that we can access the list of operations in the graph
-            #for op in graph.get_operations():
-            #    print(op.name)
-
-        # TODO Add code to do the inference operation here
+     def predict(self,options):
+        model = self.get_unet()
+        model = load_model(options.outputdir + "/model.h5")
+        test_data = self.get_test_data(options)
+        test_data = np.expand_dims(test_data,axis=3)
+        cv2.imwrite(options.outputdir + "/inference_image.jpg",model.predict(test_data))
+        print("in predict method")
 
 
 
 
-    def mnist_training(self, options, digit_image):
-        print("Currently running as User ID: %s " % os.getuid())
-        print("Trying to read from the directory %s " % options.inputdir)
-        if os.path.isdir(options.inputdir):
-            print("%s is a directory" % options.inputdir)
-        else:
-            print("%s is not a directory" % options.inputdir)
-        if os.path.isdir((options.inputdir + "/data")):
-            print("%s is a directory" % (options.inputdir + "/data"))
-        else:
-            print("%s is not a directory" % (options.inputdir + "/data"))
-        print("Trying to read data from the directory %s " % (options.inputdir + "/data"))
-        for path in os.listdir( (options.inputdir + "/data") ):
-            print(path)
-            if os.access( path, os.R_OK):
-                print("  - readable")
-            else:
-                print("  - un-readable")
-            if os.access( path, os.W_OK):
-                print("  - writable")
-            else:
-                print("  - un-writeable")
-            if os.access( path, os.X_OK):
-                print("  - executable")
-            else:
-                print("  - non-executable")
-        mnist = input_data.read_data_sets(options.inputdir + "/data", one_hot=True)
-        image_size = 28
-        labels_size = 10
-        learning_rate = 0.05
-        steps_number = 1000
-        batch_size = 100
-        # x is training data
-        x = tf.placeholder(tf.float32, [None, image_size * image_size])
-        labels = tf.placeholder(tf.float32, [None, labels_size])
-        W = tf.Variable(tf.truncated_normal([image_size * image_size, labels_size], stddev=0.1))
-        b = tf.Variable(tf.constant(0.1, shape=[labels_size]))
-        # y is the output
-        y = tf.matmul(x, W) + b
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=y))
-        training_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
-        prediction = tf.equal(tf.argmax(y, 1), tf.argmax(labels, 1))
-        accuracy = tf.reduce_mean(tf.cast(prediction, tf.float32))
-        sess = tf.InteractiveSession()
-        sess.run(tf.global_variables_initializer())
-        for i in range(steps_number):
-            input_batch, labels_batch = mnist.train.next_batch(batch_size)
-            feed_dict = {x: input_batch, labels: labels_batch}
-            training_step.run(feed_dict=feed_dict)
-            if i % 100 == 0:
-                train_accuracy = accuracy.eval(feed_dict=feed_dict)
-                print("Step %d, training batch accuracy %g %%" % (i, train_accuracy * 100))
-        test_accuracy = accuracy.eval(feed_dict={x: mnist.test.images, labels: mnist.test.labels})
-        acc = test_accuracy * 100
-        print("Test accuracy: ", acc)
-        self.create_output(options, "accuracy", acc)
 
-        if digit_image is not None:
-            prediction = sess.run(y, feed_dict={x: digit_image}).argmax()
-            print("Inference value of test Image is : ", prediction)
-            self.create_output(options, "inference", prediction)
-
+    
     def create_output(self, options, key, value):
         new_name = options.prefix + key
         str_outpath = os.path.join(options.outputdir, new_name)

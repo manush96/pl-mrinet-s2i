@@ -1,4 +1,4 @@
-#                                                            _
+#!/usr/bin/env python3                                                       _
 # tensorflowapp ds app
 #
 # (c) 2016 Fetal-Neonatal Neuroimaging & Developmental Science Center
@@ -18,7 +18,6 @@ os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 # The GPU id to use, usually either "0" or "1"
 # os.environ["CUDA_VISIBLE_DEVICES"]="0"
 # import keras.models as models
-from skimage.transform import resize
 from skimage.io import imsave
 import numpy as np
 
@@ -82,12 +81,16 @@ class Tensorflowapp(ChrisApp):
         self.add_argument('--saved_model_name', dest='saved_model_name',
                           type=str, optional=False,
                           help='name for exporting saved model')
+        self.add_argument("--run_mode",dest="run_mode",type=str,optional=False,help="Select run mode from train or infer")
 
     def run(self, options):
         """
         Define the code to be run by this plugin app.
         """
-        self.run_tensorflow_app(options)
+        if options.run_mode == "train":
+            self.run_tensorflow_app(options)
+        else:
+            self.predict(options)
 
     def run_tensorflow_app(self, options):
 
@@ -95,13 +98,10 @@ class Tensorflowapp(ChrisApp):
 
 
         digit_image = None
-        # if options.inference_path:
-        #     str_path = os.path.abspath(options.inference_path)
-        #     infer_image = Image.open(str_path)
-        #     np_image = np.array(infer_image)
-        #     np_image = np_image.flatten() / 255.0
-        #     digit_image = np.reshape(np_image, (1, 784))
-        #     print("Test Image shape: ", digit_image.shape)
+        if options.inference_path:
+            str_path = os.path.abspath(options.inference_path)
+            
+            print("Test Image shape: ", digit_image.shape)
         self.mrinet_training(options, digit_image)
 
 
@@ -216,7 +216,63 @@ class Tensorflowapp(ChrisApp):
         with open(str_outpath, 'w') as f:
             f.write(str(value))
 
+    def get_test_data(self,options):
+        test_data = np.ndarray((1,256,256),dtype=np.uint8)
+        test_files = os.listdir(options.inputdir +"/test_images")
+        for i in test_files:
+            np.append(test_data,cv2.imread(options.inputdir + "/" + i))
+        return test_data
 
+    def run(self, options):
+        """
+        Define the code to be run by this plugin app.
+        """
+        self.run_tensorflow_app(options)
+
+    def run_tensorflow_app(self, options):
+        self.predict(options)
+
+    def predict(self,options):
+        model = self.get_unet()
+        model = load_model(options.outputdir + "/model.h5")
+        test_data = self.get_test_data(options)
+        test_data = np.expand_dims(test_data,axis=3)
+        cv2.imwrite(options.outputdir + "/inference_image.jpg",model.predict(test_data))
+        print("in predict method")
+
+
+
+
+
+    
+    def create_output(self, options, key, value):
+        new_name = options.prefix + key
+        str_outpath = os.path.join(options.outputdir, new_name)
+        str_outpath = os.path.abspath(str_outpath)
+        print('Creating new file... %s' % str_outpath)
+        if not os.path.exists(options.outputdir):
+            try:
+                os.mkdir(options.outputdir)
+            except OSError:
+                print("Creation of the directory %s failed" % options.outputdir)
+            else:
+                print("Successfully created the directory %s " % options.outputdir)
+        with open(str_outpath, 'w') as f:
+            f.write(str(value))
+
+    def load_graph(frozen_graph_filename, name_prefix="prefix"):
+        # We load the protobuf file from the disk and parse it to retrieve the
+        # unserialized graph_def
+        with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+
+        # Then, we import the graph_def into a new Graph and return it
+        with tf.Graph().as_default() as graph:
+            # The name var will prefix every op/nodes in your graph
+            # Since we load everything in a new graph, this is not needed
+            tf.import_graph_def(graph_def, name=name_prefix)
+        return graph
 
 # ENTRYPOINT
 if __name__ == "__main__":
