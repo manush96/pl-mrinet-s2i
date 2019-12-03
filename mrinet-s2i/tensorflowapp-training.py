@@ -74,12 +74,12 @@ class Tensorflowapp(ChrisApp):
         """
         Define the CLI arguments accepted by this plugin app.
         """
-        self.add_argument('--prefix', dest='prefix', type=str, optional=False,
+        self.add_argument('--prefix', dest='prefix', type=str, optional=True,
                           help='prefix for file names')
         self.add_argument('--inference_path', dest='inference_path', type=str,
-                          optional=False, help='path of images')
+                          optional=True, help='path of images')
         self.add_argument('--saved_model_name', dest='saved_model_name',
-                          type=str, optional=False,
+                          type=str, optional=True,
                           help='name for exporting saved model')
         self.add_argument("--run_mode",dest="run_mode",type=str,optional=False,help="Select run mode from train or infer")
 
