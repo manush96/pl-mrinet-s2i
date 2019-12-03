@@ -1,4 +1,4 @@
-#!/usr/bin/env python3                                                       _
+#!/usr/bin/env python                                                     _
 # tensorflowapp ds app
 #
 # (c) 2016 Fetal-Neonatal Neuroimaging & Developmental Science Center
