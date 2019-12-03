@@ -229,8 +229,7 @@ class Tensorflowapp(ChrisApp):
         """
         self.run_tensorflow_app(options)
 
-    def run_tensorflow_app(self, options):
-        self.predict(options)
+
 
     def predict(self,options):
         model = self.get_unet()
